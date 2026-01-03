@@ -103,3 +103,18 @@
 [data-phx-session], [data-phx-teleported-src] { display: contents }
 
 /* This file is for your main application CSS */
+
+/* Drag and drop styles */
+.drag-over {
+  border-top: 2px solid oklch(70% 0.213 47.604);
+  margin-top: -2px;
+}
+
+.drag-over-bottom {
+  border-bottom: 2px solid oklch(70% 0.213 47.604);
+  margin-bottom: -2px;
+}
+
+.dragging {
+  opacity: 0.5;
+}

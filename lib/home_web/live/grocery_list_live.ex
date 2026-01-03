@@ -12,23 +12,6 @@ defmodule HomeWeb.GroceryListLive do
           <h1 class="text-3xl font-bold">Grocery List</h1>
         </div>
 
-        <%!-- Add Grouping Form --%>
-        <div class="card bg-base-100 shadow-xl">
-          <div class="card-body">
-            <h2 class="card-title">Add Grouping</h2>
-            <.form for={@grouping_form} id="grouping-form" phx-submit="add_grouping" phx-change="validate_grouping">
-              <.input
-                field={@grouping_form[:name]}
-                type="text"
-                label="Grouping Name"
-                placeholder="e.g., Publix, Whole Foods"
-                required
-              />
-              <button type="submit" class="btn btn-primary mt-4">Add Grouping</button>
-            </.form>
-          </div>
-        </div>
-
         <%!-- Grouped Items Display --%>
         <div class="space-y-6">
           <%= if Enum.empty?(@groupings) do %>
@@ -59,34 +42,23 @@ defmodule HomeWeb.GroceryListLive do
                   <%= if Enum.empty?(items) do %>
                     <p class="text-base-content/60 mb-4">No items in this grouping yet.</p>
                   <% else %>
-                    <div class="space-y-2 mb-4">
+                    <div id={"items-#{grouping.id}"} class="space-y-2 mb-4">
                       <%= for item <- items do %>
                         <div
+                          id={"item-#{item.id}"}
+                          draggable="true"
+                          phx-hook=".DraggableItem"
+                          data-item-id={item.id}
+                          data-grouping-id={grouping.id}
                           class={[
-                            "flex items-center gap-3 p-3 rounded-lg border transition-all",
+                            "flex items-center gap-3 p-3 rounded-lg border transition-all cursor-move",
                             item.status && "bg-base-200 opacity-75",
                             !item.status && "bg-base-50 hover:bg-base-100"
                           ]}
                         >
-                          <%!-- Reorder Controls --%>
-                          <div class="flex flex-col gap-1">
-                            <button
-                              type="button"
-                              class="btn btn-xs btn-ghost p-1"
-                              phx-click="move_item_up"
-                              phx-value-id={item.id}
-                              disabled={item.position == 0}
-                            >
-                              <.icon name="hero-arrow-up" class="w-3 h-3" />
-                            </button>
-                            <button
-                              type="button"
-                              class="btn btn-xs btn-ghost p-1"
-                              phx-click="move_item_down"
-                              phx-value-id={item.id}
-                            >
-                              <.icon name="hero-arrow-down" class="w-3 h-3" />
-                            </button>
+                          <%!-- Drag Handle Icon --%>
+                          <div class="text-base-content/40 cursor-move" data-drag-handle>
+                            <.icon name="hero-bars-3" class="w-5 h-5" />
                           </div>
 
                           <%!-- Checkbox --%>
@@ -142,8 +114,131 @@ defmodule HomeWeb.GroceryListLive do
             <% end %>
           <% end %>
         </div>
+
+        <%!-- Add Grouping Form at Bottom --%>
+        <div class="card bg-base-100 shadow-xl">
+          <div class="card-body">
+            <h2 class="card-title">Add Grouping</h2>
+            <.form for={@grouping_form} id="grouping-form" phx-submit="add_grouping" phx-change="validate_grouping">
+              <.input
+                field={@grouping_form[:name]}
+                type="text"
+                label="Grouping Name"
+                placeholder="e.g., Publix, Whole Foods"
+                required
+              />
+              <button type="submit" class="btn btn-primary mt-4">Add Grouping</button>
+            </.form>
+          </div>
+        </div>
       </div>
     </Layouts.app>
+
+    <%!-- Drag and Drop Hook --%>
+    <script :type={Phoenix.LiveView.ColocatedHook} name=".DraggableItem">
+      export default {
+        mounted() {
+          // Make the entire item draggable, but prevent dragging when clicking interactive elements
+          this.el.draggable = true;
+
+          // Prevent dragging when clicking on interactive elements
+          const interactiveElements = this.el.querySelectorAll('input, button, a');
+          interactiveElements.forEach(el => {
+            el.addEventListener("mousedown", (e) => {
+              e.stopPropagation();
+            });
+            el.addEventListener("dragstart", (e) => {
+              e.stopPropagation();
+              e.preventDefault();
+            });
+          });
+
+          this.el.addEventListener("dragstart", (e) => {
+            // Don't start drag if clicking on interactive elements
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON' || e.target.closest('button') || e.target.closest('input')) {
+              e.preventDefault();
+              return;
+            }
+
+            e.dataTransfer.effectAllowed = "move";
+            e.dataTransfer.setData("text/plain", this.el.dataset.itemId);
+            this.el.style.opacity = "0.5";
+            this.el.classList.add("dragging");
+          });
+
+          this.el.addEventListener("dragend", (e) => {
+            this.el.style.opacity = "";
+            this.el.classList.remove("dragging");
+            // Remove all drag indicators
+            document.querySelectorAll('.drag-over, .drag-over-bottom').forEach(el => {
+              el.classList.remove('drag-over', 'drag-over-bottom');
+            });
+          });
+
+          this.el.addEventListener("dragover", (e) => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = "move";
+
+            const draggedId = e.dataTransfer.getData("text/plain");
+            const draggedEl = document.querySelector(`[data-item-id="${draggedId}"]`);
+
+            if (draggedEl && draggedEl !== this.el && draggedEl.dataset.groupingId === this.el.dataset.groupingId) {
+              const rect = this.el.getBoundingClientRect();
+              const midpoint = rect.top + rect.height / 2;
+
+              if (e.clientY < midpoint) {
+                this.el.classList.add("drag-over");
+                this.el.classList.remove("drag-over-bottom");
+              } else {
+                this.el.classList.add("drag-over-bottom");
+                this.el.classList.remove("drag-over");
+              }
+            }
+          });
+
+          this.el.addEventListener("dragleave", (e) => {
+            // Only remove if we're actually leaving the element
+            if (!this.el.contains(e.relatedTarget)) {
+              this.el.classList.remove("drag-over", "drag-over-bottom");
+            }
+          });
+
+          this.el.addEventListener("drop", (e) => {
+            e.preventDefault();
+            this.el.classList.remove("drag-over", "drag-over-bottom");
+
+            const draggedItemId = e.dataTransfer.getData("text/plain");
+            const draggedEl = document.querySelector(`[data-item-id="${draggedItemId}"]`);
+
+            if (draggedEl && draggedEl !== this.el) {
+              // Only allow reordering within the same grouping
+              if (draggedEl.dataset.groupingId === this.el.dataset.groupingId) {
+                const container = this.el.parentElement;
+                const allItems = Array.from(container.children).filter(child =>
+                  child.dataset.itemId && child.dataset.groupingId === this.el.dataset.groupingId
+                );
+                const draggedIndex = allItems.indexOf(draggedEl);
+                const targetIndex = allItems.indexOf(this.el);
+
+                // Determine if we're inserting before or after the target
+                const rect = this.el.getBoundingClientRect();
+                const midpoint = rect.top + rect.height / 2;
+                const newPosition = e.clientY < midpoint ? targetIndex : targetIndex + 1;
+
+                // Adjust position if dragging down (we need to account for the removed item)
+                const finalPosition = draggedIndex < newPosition ? newPosition - 1 : newPosition;
+
+                // Send reorder event to server
+                this.pushEvent("reorder_item", {
+                  item_id: parseInt(draggedItemId),
+                  new_position: Math.max(0, finalPosition)
+                });
+              }
+            }
+          });
+        }
+      }
+    </script>
     """
   end
 
@@ -255,10 +350,10 @@ defmodule HomeWeb.GroceryListLive do
   end
 
   @impl true
-  def handle_event("move_item_up", %{"id" => id}, socket) do
-    item = GroceryList.get_item!(id)
+  def handle_event("reorder_item", %{"item_id" => item_id, "new_position" => new_position}, socket) do
+    item = GroceryList.get_item!(item_id)
 
-    case GroceryList.move_item_up(item) do
+    case GroceryList.reorder_item(item, new_position) do
       {:ok, _item} ->
         items_by_grouping = GroceryList.list_items_by_grouping()
 
@@ -269,26 +364,7 @@ defmodule HomeWeb.GroceryListLive do
         {:noreply, socket}
 
       {:error, _changeset} ->
-        {:noreply, put_flash(socket, :error, "Failed to move item up")}
-    end
-  end
-
-  @impl true
-  def handle_event("move_item_down", %{"id" => id}, socket) do
-    item = GroceryList.get_item!(id)
-
-    case GroceryList.move_item_down(item) do
-      {:ok, _item} ->
-        items_by_grouping = GroceryList.list_items_by_grouping()
-
-        socket =
-          socket
-          |> assign(:items_by_grouping, items_by_grouping)
-
-        {:noreply, socket}
-
-      {:error, _changeset} ->
-        {:noreply, put_flash(socket, :error, "Failed to move item down")}
+        {:noreply, put_flash(socket, :error, "Failed to reorder item")}
     end
   end
 
