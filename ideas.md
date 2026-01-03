@@ -1,0 +1,3 @@
+- inventory (e.g. frozen meat)
+- recipes
+- spaced repetition app
