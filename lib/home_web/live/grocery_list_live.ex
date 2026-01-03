@@ -49,7 +49,6 @@ defmodule HomeWeb.GroceryListLive do
 
           socket =
             socket
-            |> put_flash(:info, "Item added successfully")
             |> assign(:groupings, groupings)
             |> assign(:items_by_grouping, items_by_grouping)
             |> push_event("clear_form", %{})
@@ -180,7 +179,6 @@ defmodule HomeWeb.GroceryListLive do
 
         socket =
           socket
-          |> put_flash(:info, "Grouping added successfully")
           |> assign(:groupings, groupings)
           |> assign(:grouping_form, to_form(%{"name" => ""}))
           |> push_event("clear_form", %{})

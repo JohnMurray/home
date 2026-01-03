@@ -93,6 +93,7 @@
                                 name="entry"
                                 value={item.entry}
                                 class="input input-sm input-bordered w-full"
+                                autocomplete="off"
                                 autofocus
                                 phx-hook=".EditableItem"
                                 data-item-id={item.id}
@@ -138,6 +139,7 @@
                           id={"item-input-#{grouping.id}"}
                           placeholder="Add new item..."
                           class="input input-bordered flex-1"
+                          autocomplete="off"
                           required
                         />
                         <button type="submit" class="btn btn-primary">
@@ -155,16 +157,17 @@
     <%!-- Add Grouping Form at Bottom --%>
     <div class="card bg-base-100 shadow-xl">
         <div class="card-body">
-        <h2 class="card-title">Add Grouping</h2>
+        <h2 class="card-title">Add Store</h2>
         <.form for={@grouping_form} id="grouping-form" phx-submit="add_grouping" phx-change="validate_grouping" phx-hook=".ClearableForm">
             <.input
             field={@grouping_form[:name]}
             type="text"
-            label="Grouping Name"
+            label="Store Name"
             placeholder="e.g., Publix, Whole Foods"
+            autocomplete="off"
             required
             />
-            <button type="submit" class="btn btn-primary mt-4">Add Grouping</button>
+            <button type="submit" class="btn btn-primary mt-4">Add Store</button>
         </.form>
         </div>
     </div>
