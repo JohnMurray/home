@@ -72,9 +72,33 @@ defmodule HomeWeb.GroceryListLive do
 
                           <%!-- Item Entry --%>
                           <div class="flex-1">
-                            <span class={[item.status && "line-through text-base-content/50", !item.status && "text-base-content"]}>
-                              {item.entry}
-                            </span>
+                            <%= if @editing_item_id == item.id do %>
+                              <form phx-submit="update_item" id={"edit-item-form-#{item.id}"}>
+                                <input type="hidden" name="item_id" value={item.id} />
+                                <input
+                                  type="text"
+                                  id={"edit-input-#{item.id}"}
+                                  name="entry"
+                                  value={item.entry}
+                                  class="input input-sm input-bordered w-full"
+                                  autofocus
+                                  phx-hook=".EditableItem"
+                                  data-item-id={item.id}
+                                />
+                              </form>
+                            <% else %>
+                              <span
+                                class={[
+                                  "cursor-text hover:underline",
+                                  item.status && "line-through text-base-content/50",
+                                  !item.status && "text-base-content"
+                                ]}
+                                phx-click="start_edit"
+                                phx-value-id={item.id}
+                              >
+                                {item.entry}
+                              </span>
+                            <% end %>
                           </div>
 
                           <%!-- Delete Button --%>
@@ -239,6 +263,27 @@ defmodule HomeWeb.GroceryListLive do
         }
       }
     </script>
+
+    <%!-- Editable Item Hook --%>
+    <script :type={Phoenix.LiveView.ColocatedHook} name=".EditableItem">
+      export default {
+        mounted() {
+          this.el.addEventListener("blur", () => {
+            // Submit the form on blur
+            const form = this.el.closest("form");
+            if (form) {
+              form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+            }
+          });
+
+          this.el.addEventListener("keydown", (e) => {
+            if (e.key === "Escape") {
+              this.pushEvent("cancel_edit", {});
+            }
+          });
+        }
+      }
+    </script>
     """
   end
 
@@ -252,6 +297,7 @@ defmodule HomeWeb.GroceryListLive do
       |> assign(:groupings, groupings)
       |> assign(:items_by_grouping, items_by_grouping)
       |> assign(:grouping_form, to_form(%{"name" => ""}))
+      |> assign(:editing_item_id, nil)
 
     {:ok, socket}
   end
@@ -365,6 +411,47 @@ defmodule HomeWeb.GroceryListLive do
 
       {:error, _changeset} ->
         {:noreply, put_flash(socket, :error, "Failed to reorder item")}
+    end
+  end
+
+  @impl true
+  def handle_event("start_edit", %{"id" => id}, socket) do
+    {:noreply, assign(socket, :editing_item_id, String.to_integer(id))}
+  end
+
+  @impl true
+  def handle_event("cancel_edit", _params, socket) do
+    {:noreply, assign(socket, :editing_item_id, nil)}
+  end
+
+  @impl true
+  def handle_event("keydown", %{"key" => "Escape"}, socket) do
+    {:noreply, assign(socket, :editing_item_id, nil)}
+  end
+
+  @impl true
+  def handle_event("update_item", %{"item_id" => item_id, "entry" => entry}, socket) do
+    item = GroceryList.get_item!(item_id)
+
+    case GroceryList.update_item(item, %{entry: entry}) do
+      {:ok, _item} ->
+        items_by_grouping = GroceryList.list_items_by_grouping()
+
+        socket =
+          socket
+          |> put_flash(:info, "Item updated successfully")
+          |> assign(:items_by_grouping, items_by_grouping)
+          |> assign(:editing_item_id, nil)
+
+        {:noreply, socket}
+
+      {:error, changeset} ->
+        error_message =
+          changeset.errors
+          |> Enum.map(fn {field, {message, _}} -> "#{field}: #{message}" end)
+          |> Enum.join(", ")
+
+        {:noreply, put_flash(socket, :error, "Failed to update item: #{error_message}")}
     end
   end
 
