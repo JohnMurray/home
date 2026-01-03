@@ -52,6 +52,7 @@ defmodule HomeWeb.GroceryListLive do
             |> put_flash(:info, "Item added successfully")
             |> assign(:groupings, groupings)
             |> assign(:items_by_grouping, items_by_grouping)
+            |> push_event("clear_form", %{})
 
           {:noreply, socket}
 
@@ -173,7 +174,7 @@ defmodule HomeWeb.GroceryListLive do
 
   @impl true
   def handle_event("add_grouping", %{"name" => name}, socket) when name != "" do
-    case GroceryList.create_grouping(%{"name" => name}) do
+    case GroceryList.create_grouping(%{name: name}) do
       {:ok, _grouping} ->
         groupings = GroceryList.list_groupings()
 
@@ -182,6 +183,7 @@ defmodule HomeWeb.GroceryListLive do
           |> put_flash(:info, "Grouping added successfully")
           |> assign(:groupings, groupings)
           |> assign(:grouping_form, to_form(%{"name" => ""}))
+          |> push_event("clear_form", %{})
 
         {:noreply, socket}
 

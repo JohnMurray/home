@@ -127,24 +127,25 @@
                 </div>
                 <% end %>
 
-                <%!-- Add Item Input at Bottom of Grouping --%>
-                <div class="border-t pt-4">
-                <.form for={to_form(%{"entry" => ""})} id={"add-item-form-#{grouping.id}"} phx-submit="add_item">
-                    <input type="hidden" name="grouping_id" value={grouping.id} />
-                    <div class="flex gap-2">
-                    <input
-                        type="text"
-                        name="entry"
-                        placeholder="Add new item..."
-                        class="input input-bordered flex-1"
-                        required
-                    />
-                    <button type="submit" class="btn btn-primary">
-                        Add
-                    </button>
-                    </div>
-                </.form>
-                </div>
+                  <%!-- Add Item Input at Bottom of Grouping --%>
+                  <div class="border-t pt-4">
+                    <.form for={to_form(%{"entry" => ""})} id={"add-item-form-#{grouping.id}"} phx-submit="add_item" phx-hook=".ClearableForm" data-grouping-id={grouping.id}>
+                      <input type="hidden" name="grouping_id" value={grouping.id} />
+                      <div class="flex gap-2">
+                        <input
+                          type="text"
+                          name="entry"
+                          id={"item-input-#{grouping.id}"}
+                          placeholder="Add new item..."
+                          class="input input-bordered flex-1"
+                          required
+                        />
+                        <button type="submit" class="btn btn-primary">
+                          Add
+                        </button>
+                      </div>
+                    </.form>
+                  </div>
             </div>
             </div>
         <% end %>
@@ -155,7 +156,7 @@
     <div class="card bg-base-100 shadow-xl">
         <div class="card-body">
         <h2 class="card-title">Add Grouping</h2>
-        <.form for={@grouping_form} id="grouping-form" phx-submit="add_grouping" phx-change="validate_grouping">
+        <.form for={@grouping_form} id="grouping-form" phx-submit="add_grouping" phx-change="validate_grouping" phx-hook=".ClearableForm">
             <.input
             field={@grouping_form[:name]}
             type="text"
@@ -276,23 +277,38 @@
     }
 </script>
 
-<%!-- Editable Item Hook --%>
-<script :type={Phoenix.LiveView.ColocatedHook} name=".EditableItem">
-    export default {
-    mounted() {
-        this.el.addEventListener("blur", () => {
-        // Submit the form on blur
-        const form = this.el.closest("form");
-        if (form) {
-            form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
-        }
-        });
+    <%!-- Editable Item Hook --%>
+    <script :type={Phoenix.LiveView.ColocatedHook} name=".EditableItem">
+      export default {
+        mounted() {
+          this.el.addEventListener("blur", () => {
+            // Submit the form on blur
+            const form = this.el.closest("form");
+            if (form) {
+              form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+            }
+          });
 
-        this.el.addEventListener("keydown", (e) => {
-        if (e.key === "Escape") {
-            this.pushEvent("cancel_edit", {});
+          this.el.addEventListener("keydown", (e) => {
+            if (e.key === "Escape") {
+              this.pushEvent("cancel_edit", {});
+            }
+          });
         }
-        });
-    }
-    }
-</script>
+      }
+    </script>
+
+    <%!-- Clearable Form Hook --%>
+    <script :type={Phoenix.LiveView.ColocatedHook} name=".ClearableForm">
+      export default {
+        mounted() {
+          this.handleEvent("clear_form", () => {
+            // Find all text inputs in this form
+            const inputs = this.el.querySelectorAll('input[type="text"]');
+            inputs.forEach(input => {
+              input.value = "";
+            });
+          });
+        }
+      }
+    </script>

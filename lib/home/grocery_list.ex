@@ -19,6 +19,9 @@ defmodule Home.GroceryList do
   def get_grouping!(id), do: Repo.get!(Grouping, id)
 
   def create_grouping(attrs \\ %{}) do
+    # Handle both string and atom keys
+    name = Map.get(attrs, :name) || Map.get(attrs, "name")
+
     # Auto-assign position as max+1
     max_position =
       Repo.one(
@@ -26,9 +29,10 @@ defmodule Home.GroceryList do
           select: max(g.position)
       ) || -1
 
-    attrs_with_position =
-      attrs
-      |> Map.put("position", max_position + 1)
+    attrs_with_position = %{
+      name: name,
+      position: max_position + 1
+    }
 
     %Grouping{}
     |> Grouping.changeset(attrs_with_position)
