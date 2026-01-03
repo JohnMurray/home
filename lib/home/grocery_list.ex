@@ -10,14 +10,28 @@ defmodule Home.GroceryList do
   ## Groupings
 
   def list_groupings do
-    Repo.all(Grouping)
+    Repo.all(
+      from g in Grouping,
+        order_by: [asc: g.position]
+    )
   end
 
   def get_grouping!(id), do: Repo.get!(Grouping, id)
 
   def create_grouping(attrs \\ %{}) do
+    # Auto-assign position as max+1
+    max_position =
+      Repo.one(
+        from g in Grouping,
+          select: max(g.position)
+      ) || -1
+
+    attrs_with_position =
+      attrs
+      |> Map.put("position", max_position + 1)
+
     %Grouping{}
-    |> Grouping.changeset(attrs)
+    |> Grouping.changeset(attrs_with_position)
     |> Repo.insert()
   end
 
@@ -28,7 +42,71 @@ defmodule Home.GroceryList do
   end
 
   def delete_grouping(%Grouping{} = grouping) do
-    Repo.delete(grouping)
+    position = grouping.position
+
+    Repo.transaction(fn ->
+      Repo.delete(grouping)
+
+      # Reorder remaining groupings
+      from(g in Grouping,
+        where: g.position > ^position,
+        update: [set: [position: fragment("position - 1")]]
+      )
+      |> Repo.update_all([])
+    end)
+  end
+
+  def move_grouping_up(%Grouping{} = grouping) do
+    if grouping.position > 0 do
+      reorder_grouping(grouping, grouping.position - 1)
+    else
+      {:ok, grouping}
+    end
+  end
+
+  def move_grouping_down(%Grouping{} = grouping) do
+    max_position =
+      Repo.one(
+        from g in Grouping,
+          select: max(g.position)
+      ) || 0
+
+    if grouping.position < max_position do
+      reorder_grouping(grouping, grouping.position + 1)
+    else
+      {:ok, grouping}
+    end
+  end
+
+  defp reorder_grouping(%Grouping{} = grouping, new_position) do
+    old_position = grouping.position
+
+    if new_position == old_position do
+      {:ok, grouping}
+    else
+      Repo.transaction(fn ->
+        if new_position > old_position do
+          # Moving down: shift items between old and new position up
+          from(g in Grouping,
+            where: g.position > ^old_position and g.position <= ^new_position,
+            update: [set: [position: fragment("position - 1")]]
+          )
+          |> Repo.update_all([])
+        else
+          # Moving up: shift items between new and old position down
+          from(g in Grouping,
+            where: g.position >= ^new_position and g.position < ^old_position,
+            update: [set: [position: fragment("position + 1")]]
+          )
+          |> Repo.update_all([])
+        end
+
+        case update_grouping(grouping, %{position: new_position}) do
+          {:ok, updated_grouping} -> updated_grouping
+          {:error, changeset} -> Repo.rollback(changeset)
+        end
+      end)
+    end
   end
 
   ## Items

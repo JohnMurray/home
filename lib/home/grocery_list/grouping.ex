@@ -4,6 +4,7 @@ defmodule Home.GroceryList.Grouping do
 
   schema "grocery_list_groupings" do
     field :name, :string
+    field :position, :integer
     has_many :items, Home.GroceryList.Item, foreign_key: :grocery_list_grouping_id
 
     timestamps(type: :utc_datetime)
@@ -12,8 +13,8 @@ defmodule Home.GroceryList.Grouping do
   @doc false
   def changeset(grouping, attrs) do
     grouping
-    |> cast(attrs, [:name])
-    |> validate_required([:name])
+    |> cast(attrs, [:name, :position])
+    |> validate_required([:name, :position])
     |> unique_constraint(:name)
   end
 end

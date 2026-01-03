@@ -202,6 +202,44 @@ defmodule HomeWeb.GroceryListLive do
   end
 
   @impl true
+  def handle_event("move_grouping_up", %{"id" => id}, socket) do
+    grouping = GroceryList.get_grouping!(id)
+
+    case GroceryList.move_grouping_up(grouping) do
+      {:ok, _grouping} ->
+        groupings = GroceryList.list_groupings()
+
+        socket =
+          socket
+          |> assign(:groupings, groupings)
+
+        {:noreply, socket}
+
+      {:error, _changeset} ->
+        {:noreply, put_flash(socket, :error, "Failed to move grouping up")}
+    end
+  end
+
+  @impl true
+  def handle_event("move_grouping_down", %{"id" => id}, socket) do
+    grouping = GroceryList.get_grouping!(id)
+
+    case GroceryList.move_grouping_down(grouping) do
+      {:ok, _grouping} ->
+        groupings = GroceryList.list_groupings()
+
+        socket =
+          socket
+          |> assign(:groupings, groupings)
+
+        {:noreply, socket}
+
+      {:error, _changeset} ->
+        {:noreply, put_flash(socket, :error, "Failed to move grouping down")}
+    end
+  end
+
+  @impl true
   def handle_event("delete_grouping", %{"id" => id}, socket) do
     grouping = GroceryList.get_grouping!(id)
 
