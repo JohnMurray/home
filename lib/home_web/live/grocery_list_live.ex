@@ -12,47 +12,20 @@ defmodule HomeWeb.GroceryListLive do
           <h1 class="text-3xl font-bold">Grocery List</h1>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <%!-- Add Item Form --%>
-          <div class="card bg-base-100 shadow-xl">
-            <div class="card-body">
-              <h2 class="card-title">Add Item</h2>
-              <.form for={@item_form} id="item-form" phx-submit="add_item" phx-change="validate_item">
-                <.input
-                  field={@item_form[:entry]}
-                  type="text"
-                  label="Item"
-                  placeholder="Enter item name"
-                  required
-                />
-                <.input
-                  field={@item_form[:grocery_list_grouping_id]}
-                  type="select"
-                  label="Grouping"
-                  prompt="Select a grouping"
-                  options={Enum.map(@groupings, fn g -> {g.name, g.id} end)}
-                  required
-                />
-                <button type="submit" class="btn btn-primary mt-4">Add Item</button>
-              </.form>
-            </div>
-          </div>
-
-          <%!-- Add Grouping Form --%>
-          <div class="card bg-base-100 shadow-xl">
-            <div class="card-body">
-              <h2 class="card-title">Add Grouping</h2>
-              <.form for={@grouping_form} id="grouping-form" phx-submit="add_grouping" phx-change="validate_grouping">
-                <.input
-                  field={@grouping_form[:name]}
-                  type="text"
-                  label="Grouping Name"
-                  placeholder="e.g., Publix, Whole Foods"
-                  required
-                />
-                <button type="submit" class="btn btn-primary mt-4">Add Grouping</button>
-              </.form>
-            </div>
+        <%!-- Add Grouping Form --%>
+        <div class="card bg-base-100 shadow-xl">
+          <div class="card-body">
+            <h2 class="card-title">Add Grouping</h2>
+            <.form for={@grouping_form} id="grouping-form" phx-submit="add_grouping" phx-change="validate_grouping">
+              <.input
+                field={@grouping_form[:name]}
+                type="text"
+                label="Grouping Name"
+                placeholder="e.g., Publix, Whole Foods"
+                required
+              />
+              <button type="submit" class="btn btn-primary mt-4">Add Grouping</button>
+            </.form>
           </div>
         </div>
 
@@ -84,9 +57,9 @@ defmodule HomeWeb.GroceryListLive do
                   </div>
 
                   <%= if Enum.empty?(items) do %>
-                    <p class="text-base-content/60">No items in this grouping yet.</p>
+                    <p class="text-base-content/60 mb-4">No items in this grouping yet.</p>
                   <% else %>
-                    <div class="space-y-2">
+                    <div class="space-y-2 mb-4">
                       <%= for item <- items do %>
                         <div
                           class={[
@@ -145,6 +118,25 @@ defmodule HomeWeb.GroceryListLive do
                       <% end %>
                     </div>
                   <% end %>
+
+                  <%!-- Add Item Input at Bottom of Grouping --%>
+                  <div class="border-t pt-4">
+                    <.form for={to_form(%{"entry" => ""})} id={"add-item-form-#{grouping.id}"} phx-submit="add_item">
+                      <input type="hidden" name="grouping_id" value={grouping.id} />
+                      <div class="flex gap-2">
+                        <input
+                          type="text"
+                          name="entry"
+                          placeholder="Add new item..."
+                          class="input input-bordered flex-1"
+                          required
+                        />
+                        <button type="submit" class="btn btn-primary">
+                          Add
+                        </button>
+                      </div>
+                    </.form>
+                  </div>
                 </div>
               </div>
             <% end %>
@@ -164,7 +156,6 @@ defmodule HomeWeb.GroceryListLive do
       socket
       |> assign(:groupings, groupings)
       |> assign(:items_by_grouping, items_by_grouping)
-      |> assign(:item_form, to_form(%{"entry" => "", "grocery_list_grouping_id" => ""}))
       |> assign(:grouping_form, to_form(%{"name" => ""}))
 
     {:ok, socket}
@@ -176,37 +167,52 @@ defmodule HomeWeb.GroceryListLive do
   end
 
   @impl true
-  def handle_event("add_item", %{"entry" => entry, "grocery_list_grouping_id" => grouping_id}, socket)
-      when entry != "" and grouping_id != "" do
-    case GroceryList.create_item(%{
-           entry: entry,
-           grocery_list_grouping_id: String.to_integer(grouping_id)
-         }) do
-      {:ok, _item} ->
-        groupings = GroceryList.list_groupings()
-        items_by_grouping = GroceryList.list_items_by_grouping()
+  def handle_event("add_item", %{"entry" => entry} = params, socket) when entry != "" do
+    grouping_id =
+      case Map.get(params, "grouping_id") do
+        nil -> Map.get(params, "grocery_list_grouping_id")
+        id -> id
+      end
 
-        socket =
-          socket
-          |> put_flash(:info, "Item added successfully")
-          |> assign(:groupings, groupings)
-          |> assign(:items_by_grouping, items_by_grouping)
-          |> assign(:item_form, to_form(%{"entry" => "", "grocery_list_grouping_id" => ""}))
+    grouping_id =
+      case grouping_id do
+        id when is_binary(id) -> String.to_integer(id)
+        id when is_integer(id) -> id
+        _ -> nil
+      end
 
-        {:noreply, socket}
+    if grouping_id do
+      case GroceryList.create_item(%{
+             entry: entry,
+             grocery_list_grouping_id: grouping_id
+           }) do
+        {:ok, _item} ->
+          groupings = GroceryList.list_groupings()
+          items_by_grouping = GroceryList.list_items_by_grouping()
 
-      {:error, changeset} ->
-        error_message =
-          changeset.errors
-          |> Enum.map(fn {field, {message, _}} -> "#{field}: #{message}" end)
-          |> Enum.join(", ")
+          socket =
+            socket
+            |> put_flash(:info, "Item added successfully")
+            |> assign(:groupings, groupings)
+            |> assign(:items_by_grouping, items_by_grouping)
 
-        {:noreply, put_flash(socket, :error, "Failed to add item: #{error_message}")}
+          {:noreply, socket}
+
+        {:error, changeset} ->
+          error_message =
+            changeset.errors
+            |> Enum.map(fn {field, {message, _}} -> "#{field}: #{message}" end)
+            |> Enum.join(", ")
+
+          {:noreply, put_flash(socket, :error, "Failed to add item: #{error_message}")}
+      end
+    else
+      {:noreply, put_flash(socket, :error, "Please provide a grouping")}
     end
   end
 
   def handle_event("add_item", _params, socket) do
-    {:noreply, put_flash(socket, :error, "Please provide both entry and grouping")}
+    {:noreply, put_flash(socket, :error, "Please provide an item name")}
   end
 
   @impl true
@@ -338,10 +344,6 @@ defmodule HomeWeb.GroceryListLive do
     end
   end
 
-  @impl true
-  def handle_event("validate_item", %{"entry" => _entry, "grocery_list_grouping_id" => _grouping_id}, socket) do
-    {:noreply, socket}
-  end
 
   @impl true
   def handle_event("validate_grouping", %{"name" => _name}, socket) do
