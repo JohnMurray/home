@@ -44,12 +44,20 @@
       <!-- Icon Grid -->
       <div class="mt-8 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
         <!-- Example grid item with icon inside the square -->
+        <a href={~p"/grocery_list"}>
         <div class="aspect-square flex items-center justify-center bg-base-200 rounded-lg shadow hover:bg-base-300 transition-colors cursor-pointer">
           <!-- Placeholder icon: you can replace this SVG with your icons -->
-          <svg class="w-8 h-8 text-base-content" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-            <circle cx="12" cy="12" r="8" />
+          <!-- INSERT_YOUR_CODE -->
+          <svg class="w-8 h-8 text-base-content" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="5.5" y="3.5" width="13" height="17" rx="2.25" fill="none" stroke="currentColor"/>
+            <path d="M9 7h6M9 11h6M9 15h3" />
+            <circle cx="7.3" cy="7" r="0.75" fill="currentColor"/>
+            <circle cx="7.3" cy="11" r="0.75" fill="currentColor"/>
+            <circle cx="7.3" cy="15" r="0.75" fill="currentColor"/>
           </svg>
+          Grocery List
         </div>
+        </a>
         <div class="aspect-square flex items-center justify-center bg-base-200 rounded-lg shadow hover:bg-base-300 transition-colors cursor-pointer">
           <!-- Icon placeholder -->
           <svg class="w-8 h-8 text-base-content" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">

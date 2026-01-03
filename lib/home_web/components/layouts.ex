@@ -37,26 +37,19 @@ defmodule HomeWeb.Layouts do
     ~H"""
     <header class="navbar px-4 sm:px-6 lg:px-8">
       <div class="flex-1">
-        <a href="/" class="flex-1 flex w-fit items-center gap-2">
-          <img src={~p"/images/logo.svg"} width="36" />
-          <span class="text-sm font-semibold">v{Application.spec(:phoenix, :vsn)}</span>
+        <a href={~p"/"} class="flex-1 flex w-fit items-center gap-2">
+          <svg class="size-7 fill-base-content" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="M3 10.75V20a1 1 0 001 1h5.25a.75.75 0 00.75-.75v-4.25h3v4.25a.75.75 0 00.75.75H20a1 1 0 001-1V10.75a1.09 1.09 0 00-.3-.77l-7-7a1.09 1.09 0 00-1.54 0l-7 7A1.09 1.09 0 003 10.75zm2 .23L12 3.98l7 7v8.77h-3.5v-4.25A2.75 2.75 0 0012.75 13h-1.5A2.75 2.75 0 008.5 15.75v4.25H5v-8.77z"/>
+          </svg>
         </a>
       </div>
       <div class="flex-none">
         <ul class="flex flex-column px-1 space-x-4 items-center">
           <li>
-            <a href="https://phoenixframework.org/" class="btn btn-ghost">Website</a>
-          </li>
-          <li>
-            <a href="https://github.com/phoenixframework/phoenix" class="btn btn-ghost">GitHub</a>
+            <a href={~p"/"} class="btn btn-ghost">Home</a>
           </li>
           <li>
             <.theme_toggle />
-          </li>
-          <li>
-            <a href="https://hexdocs.pm/phoenix/overview.html" class="btn btn-primary">
-              Get Started <span aria-hidden="true">&rarr;</span>
-            </a>
           </li>
         </ul>
       </div>
